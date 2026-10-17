@@ -1,0 +1,42 @@
+[
+  {
+    "id": "rule_1",
+    "target": "185.220.101.5",
+    "target_type": "ip",
+    "reason": "IDS Auto-Mitigation: Horizontal TCP Port Sweep Detected",
+    "action": "DROP",
+    "is_active": true,
+    "created_at": "2026-10-17 14:20:00",
+    "hits": 142
+  },
+  {
+    "id": "rule_2",
+    "target": "198.51.100.23",
+    "target_type": "ip",
+    "reason": "Repeated SSH Credential Brute-Force",
+    "action": "DROP",
+    "is_active": true,
+    "created_at": "2026-10-17 16:45:12",
+    "hits": 89
+  },
+  {
+    "id": "rule_3",
+    "target": "malware-traffic-telemetry.net",
+    "target_type": "domain",
+    "reason": "Suspected C2 Beacon & Ransomware Dropper",
+    "action": "BLOCK",
+    "is_active": true,
+    "created_at": "2026-10-17 18:10:30",
+    "hits": 215
+  },
+  {
+    "id": "rule_4",
+    "target": "adservice.tracker-analytics.com",
+    "target_type": "domain",
+    "reason": "Intrusive Cross-Site Behavioral Tracker",
+    "action": "BLOCK",
+    "is_active": true,
+    "created_at": "2026-10-17 19:30:15",
+    "hits": 540
+  }
+]

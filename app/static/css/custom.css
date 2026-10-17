@@ -1,0 +1,202 @@
+/* CyberNinjas - 100vh Enterprise Operations Styling */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --bg-dark: #090a0f;
+    --bg-header: #0e121b;
+    --bg-card: #131722;
+    --bg-card-hover: #181d2c;
+    --bg-elevated: #1a2030;
+    --border-color: #222a3d;
+    --border-subtle: #192030;
+    --border-focus: #00e5ff;
+    
+    --text-primary: #ffffff;
+    --text-secondary: #cbd5e1;
+    --text-muted: #8896ab;
+    
+    --accent-cyan: #00e5ff;
+    --accent-amber: #f59e0b;
+    --accent-emerald: #10b981;
+    --accent-rose: #f43f5e;
+    --accent-indigo: #818cf8;
+}
+
+html, body {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* 100vh Panels with Crisp Surface Contrast */
+.glass-panel {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.5);
+}
+
+.glass-panel-interactive {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.5);
+    transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.glass-panel-interactive:hover {
+    border-color: var(--accent-cyan);
+    background-color: var(--bg-card-hover);
+    transform: translateY(-1px);
+}
+
+/* High Contrast Slim Scrollbars for 100vh containers */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #090a0f;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #28334a;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #3b4968;
+}
+
+/* High Contrast Hexdump & Packet Payload Display */
+.hexdump-viewer {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    background-color: #06080e;
+    border: 1px solid #1f2738;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    color: #00e5ff;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+/* Live Status Indicator Pulse */
+@keyframes live-pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.4;
+        transform: scale(1.12);
+    }
+}
+
+.animate-live-pulse {
+    animation: live-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Radar Sweep Animation */
+@keyframes radar-sweep {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.radar-sweep-animation {
+    animation: radar-sweep 2s linear infinite;
+}
+
+/* Navigation Tabs */
+.nav-tab {
+    color: #94a3b8;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s ease;
+}
+
+.nav-tab:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.nav-tab.active {
+    color: #ffffff;
+    background-color: #1a2233;
+    border-bottom: 2px solid #00e5ff;
+    font-weight: 600;
+}
+
+/* Table High-Contrast Headers & Hover */
+table thead th {
+    color: #cbd5e1;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+table tbody tr {
+    transition: background-color 0.1s ease;
+}
+
+table tbody tr:hover {
+    background-color: rgba(26, 34, 51, 0.7) !important;
+}
+
+/* Navbar Logo Free-Floating Glowing Styling (No box border or bg) */
+.cyberninjas-logo-mark {
+    filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.4));
+    transition: filter 0.3s ease, transform 0.3s ease;
+}
+
+.cyberninjas-brand:hover .cyberninjas-logo-mark {
+    filter: drop-shadow(0 0 16px rgba(0, 229, 255, 0.8));
+    transform: scale(1.05);
+}
+
+.cyberninjas-logo-text {
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.7));
+    transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+.cyberninjas-brand:hover .cyberninjas-logo-text {
+    filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.55));
+}
+
+/* Footer Logo Free-Floating Glowing Styling (No box border or bg) */
+.cyberninjas-footer-logo-mark {
+    filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.45));
+    transition: filter 0.3s ease, transform 0.3s ease;
+}
+
+.cyberninjas-footer-brand:hover .cyberninjas-footer-logo-mark {
+    filter: drop-shadow(0 0 12px rgba(0, 229, 255, 0.85));
+    transform: scale(1.08);
+}
+
+.cyberninjas-footer-logo-text {
+    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.7));
+    transition: filter 0.3s ease;
+}
+
+.cyberninjas-footer-brand:hover .cyberninjas-footer-logo-text {
+    filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.6));
+}

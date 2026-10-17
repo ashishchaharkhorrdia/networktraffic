@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-screen overflow-hidden">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberNinjas - Network Traffic & Security Analysis Suite</title>
+    <link rel="icon" type="image/gif" href="/static/cyber/3d.gif">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#090a0f',
+                        darkheader: '#0e121b',
+                        darkcard: '#131722',
+                        darkhover: '#181d2c',
+                        borderdark: '#222a3d',
+                        cyancyber: '#00e5ff',
+                        ambercyber: '#f59e0b',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome 6 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/custom.css?v=3">
+</head>
+
+<body
+    class="bg-[#090a0f] text-slate-100 h-screen max-h-screen overflow-hidden flex flex-col antialiased selection:bg-[#00e5ff] selection:text-black">
+
+    <!-- Top Navigation Bar (Fixed Height ~74px for 100vh layout) -->
+    <header class="sticky top-0 z-40 bg-[#0e121b] border-b border-[#222a3d] px-4 py-2 shrink-0 shadow-md">
+        <div class="max-w-[1700px] mx-auto flex items-center justify-between">
+            <!-- Brand -->
+            <a href="#" class="cyberninjas-brand flex items-center space-x-3.5 group select-none cursor-pointer">
+                <!-- Free-floating 3D Mask Emblem (no background, no box border) -->
+                <img src="/static/cyber/3d.gif" alt="CyberNinjas Emblem"
+                    class="cyberninjas-logo-mark h-10 w-10 sm:h-11 sm:w-11 object-contain pointer-events-none">
+
+                <!-- Free-floating CyberNinjas Wordmark (no background, no box border) -->
+                <div class="flex flex-col justify-center">
+                    <img src="/static/cyber/logo2.png" alt="CyberNinjas"
+                        class="cyberninjas-logo-text h-7 sm:h-8 w-auto max-w-[210px] sm:max-w-[270px] object-contain">
+                    <div class="flex items-center space-x-2 mt-0.5 leading-none">
+                        <span class="text-[9px] font-mono tracking-widest text-[#00e5ff] uppercase font-bold">Ops
+                            Console</span>
+                        <span class="text-slate-600 text-[9px]">&bull;</span>
+                        <span class="text-[9px] font-mono tracking-wider text-slate-400 uppercase">Network
+                            Telemetry</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Global Status Center -->
+            <div class="hidden lg:flex items-center space-x-5 text-xs font-mono">
+                <!-- Interface Selector -->
+                <div class="flex items-center space-x-2 bg-[#131722] px-2.5 py-1 rounded-lg border border-[#222a3d]">
+                    <i class="fa-solid fa-ethernet text-[#00e5ff] text-xs"></i>
+                    <select id="interfaceSelect"
+                        class="bg-darkbg text-slate-100 outline-none cursor-pointer text-xs font-medium">
+                        <option value="all">All Interfaces</option>
+                    </select>
+                </div>
+
+                <!-- Gateway -->
+                <div class="flex items-center space-x-1.5 text-slate-300">
+                    <span class="text-slate-400">Gateway:</span>
+                    <span id="topGatewayIp" class="text-white font-semibold">-</span>
+                </div>
+
+                <!-- Session RX/TX with Cyan & Amber Color Coding -->
+                <div class="flex items-center space-x-3 border-l border-[#222a3d] pl-3">
+                    <div>
+                        <span class="text-slate-400">RX:</span>
+                        <span id="topSessionRx" class="text-[#00e5ff] font-bold">0 MB</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">TX:</span>
+                        <span id="topSessionTx" class="text-[#f59e0b] font-bold">0 MB</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Actions & WebSocket Status -->
+            <div class="flex items-center space-x-2.5">
+                <!-- Live WebSocket Pill -->
+                <div id="wsStatusPill"
+                    class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#131722] border border-[#222a3d] text-xs text-slate-300 font-medium">
+                    <div id="wsStatusDot" class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></div>
+                    <span id="wsStatusText" class="font-mono text-[11px] font-bold tracking-wider">CONNECTING...</span>
+                </div>
+
+                <!-- Threat Alerts Button/Badge -->
+                <button onclick="switchTab('ids')" class="text-xs px-2.5 py-1 rounded-lg bg-[#131722] hover:bg-[#181d2c] border border-[#222a3d] hover:border-amber-700/60 text-slate-200 transition flex items-center space-x-1.5 font-medium" title="Security Threat Alerts (IDS)">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                    <span class="hidden sm:inline">Threats</span>
+                    <span id="navAlertBadge" class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">0</span>
+                </button>
+
+                <!-- Pause/Resume Stream -->
+                <button id="btnPauseStream" onclick="toggleLiveStream()"
+                    class="text-xs px-2.5 py-1 rounded-lg bg-[#131722] hover:bg-[#181d2c] border border-[#222a3d] text-slate-200 transition flex items-center font-medium">
+                    <i class="fa-solid fa-pause mr-1 text-slate-400"></i> Pause
+                </button>
+
+                <!-- Export Report -->
+                <button onclick="exportReport()"
+                    class="text-xs px-3 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition shadow-sm flex items-center">
+                    <i class="fa-solid fa-file-arrow-down mr-1"></i> Export Snapshot
+                </button>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs Bar (Compact Height) -->
+        <div
+            class="max-w-[1700px] mx-auto mt-2 border-t border-[#222a3d] pt-1.5 flex space-x-1 overflow-x-auto text-xs font-medium">
+            <button data-tab="overview"
+                class="nav-tab active px-3.5 py-1.5 rounded-lg flex items-center space-x-2 transition">
+                <i class="fa-solid fa-chart-area text-xs"></i>
+                <span>Throughput &amp; Metrics</span>
+            </button>
+            <button data-tab="scanner" class="nav-tab px-3.5 py-1.5 rounded-lg flex items-center space-x-2 transition">
+                <i class="fa-solid fa-network-wired text-xs"></i>
+                <span>Subnet Host Discovery</span>
+            </button>
+            <button data-tab="connections"
+                class="nav-tab px-3.5 py-1.5 rounded-lg flex items-center space-x-2 transition">
+                <i class="fa-solid fa-diagram-project text-xs"></i>
+                <span>Active Sockets &amp; Processes</span>
+            </button>
+            <button data-tab="sniffer" class="nav-tab px-3.5 py-1.5 rounded-lg flex items-center space-x-2 transition">
+                <i class="fa-solid fa-layer-group text-xs"></i>
+                <span>Packet Capture &amp; PCAP</span>
+            </button>
+            <button data-tab="firewall" class="nav-tab px-3.5 py-1.5 rounded-lg flex items-center space-x-2 transition">
+                <i class="fa-solid fa-shield-virus text-xs"></i>
+                <span>Firewall &amp; Blocker</span>
+            </button>
+            <button data-tab="ids" class="nav-tab px-3.5 py-1.5 rounded-lg flex items-center space-x-2 transition">
+                <i class="fa-solid fa-shield-halved text-xs text-[#f59e0b]"></i>
+                <span>Threat Intelligence &amp; IDS</span>
+                <span id="tabAlertPill" class="text-[10px] px-1.5 rounded-full bg-rose-950 text-rose-300 border border-rose-800 font-mono">0</span>
+            </button>
+            <button data-tab="diagnostics"
+                class="nav-tab px-3.5 py-1.5 rounded-lg flex items-center space-x-2 transition">
+                <i class="fa-solid fa-gauge-high text-xs"></i>
+                <span>Network Diagnostics</span>
+            </button>
+            <button data-tab="settings" class="nav-tab px-3.5 py-1.5 rounded-lg flex items-center space-x-2 transition">
+                <i class="fa-solid fa-sliders text-xs"></i>
+                <span>System Privileges &amp; Setup</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Application Container (Fills 100vh between header and footer with internal scrolling) -->
+    <main
+        class="flex-1 h-[calc(100vh-112px)] overflow-y-auto px-4 py-3 lg:px-6 lg:py-3.5 max-w-[1700px] mx-auto w-full">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: OVERVIEW & LIVE NETWORK LOAD        -->
+        <!-- ========================================== -->
+        <section id="tab-overview" class="tab-content active-tab-content space-y-3.5">
+
+            <!-- KPI Summary Cards Row (Compact Height for 100vh view) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <!-- Download Speed (Electric Cyan) -->
+                <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                    <div class="flex items-center justify-between text-slate-300 mb-1">
+                        <span class="text-xs font-semibold text-slate-300">Download Rate (RX)</span>
+                        <div
+                            class="w-6 h-6 rounded-md bg-[#082c38] border border-[#0e4a5c] flex items-center justify-center text-[#00e5ff] text-xs">
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-1.5">
+                        <span id="cardRxSpeed" class="font-mono text-2xl font-extrabold text-white">0</span>
+                        <span class="text-xs font-mono text-[#00e5ff] font-bold">KB/s</span>
+                    </div>
+                    <div class="mt-1 text-xs font-mono text-slate-300 flex items-center space-x-1">
+                        <span class="text-slate-400">Rate:</span>
+                        <span id="cardRxMbps" class="text-white font-semibold">0 Mbps</span>
+                    </div>
+                </div>
+
+                <!-- Upload Speed (Vivid Amber) -->
+                <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                    <div class="flex items-center justify-between text-slate-300 mb-1">
+                        <span class="text-xs font-semibold text-slate-300">Upload Rate (TX)</span>
+                        <div
+                            class="w-6 h-6 rounded-md bg-[#33220a] border border-[#5c3d0e] flex items-center justify-center text-[#f59e0b] text-xs">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-1.5">
+                        <span id="cardTxSpeed" class="font-mono text-2xl font-extrabold text-white">0</span>
+                        <span class="text-xs font-mono text-[#f59e0b] font-bold">KB/s</span>
+                    </div>
+                    <div class="mt-1 text-xs font-mono text-slate-300 flex items-center space-x-1">
+                        <span class="text-slate-400">Rate:</span>
+                        <span id="cardTxMbps" class="text-white font-semibold">0 Mbps</span>
+                    </div>
+                </div>
+
+                <!-- Active Sockets (Emerald) -->
+                <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                    <div class="flex items-center justify-between text-slate-300 mb-1">
+                        <span class="text-xs font-semibold text-slate-300">Active Sockets</span>
+                        <div
+                            class="w-6 h-6 rounded-md bg-[#082e1e] border border-[#0e5236] flex items-center justify-center text-[#10b981] text-xs">
+                            <i class="fa-solid fa-network-wired"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-1.5">
+                        <span id="cardActiveSockets" class="font-mono text-2xl font-extrabold text-white">0</span>
+                        <span class="text-xs text-slate-400 font-medium">sockets</span>
+                    </div>
+                    <div class="mt-1 text-xs text-[#10b981] font-mono font-medium">
+                        <span id="cardEstablishedSockets">0 established</span>
+                    </div>
+                </div>
+
+                <!-- Discovered LAN Hosts (Indigo) -->
+                <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                    <div class="flex items-center justify-between text-slate-300 mb-1">
+                        <span class="text-xs font-semibold text-slate-300">Discovered Hosts</span>
+                        <div
+                            class="w-6 h-6 rounded-md bg-[#181a3d] border border-[#2d316e] flex items-center justify-center text-[#818cf8] text-xs">
+                            <i class="fa-solid fa-server"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-1.5">
+                        <span id="cardLanHosts" class="font-mono text-2xl font-extrabold text-white">0</span>
+                        <span class="text-xs text-slate-400 font-medium">devices</span>
+                    </div>
+                    <div class="mt-1 text-xs text-[#00e5ff] font-medium">
+                        <a href="javascript:void(0)" onclick="switchTab('scanner')"
+                            class="hover:underline flex items-center">
+                            Open Scanner <i class="fa-solid fa-chevron-right ml-1 text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Drops / Errors (Rose Coral) -->
+                <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                    <div class="flex items-center justify-between text-slate-300 mb-1">
+                        <span class="text-xs font-semibold text-slate-300">Packet Drops</span>
+                        <div
+                            class="w-6 h-6 rounded-md bg-[#330f18] border border-[#5c1626] flex items-center justify-center text-[#f43f5e] text-xs">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-1.5">
+                        <span id="cardDropRate" class="font-mono text-2xl font-extrabold text-white">0</span>
+                        <span class="text-xs text-slate-400 font-medium">drops/s</span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-400 font-mono">
+                        <span>Normal (&lt;0.1%)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Primary Real-Time Dual Graphs (Sized for 100vh fit) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
+                <!-- Live Bandwidth Chart (2 Columns) -->
+                <div
+                    class="lg:col-span-2 glass-panel p-4 rounded-xl border border-[#222a3d] flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <h3 class="font-bold text-white text-sm flex items-center space-x-2">
+                                <span class="w-2 h-2 rounded-full bg-[#00e5ff] animate-live-pulse"></span>
+                                <span>Network Bandwidth Throughput</span>
+                            </h3>
+                            <p class="text-[11px] text-slate-400">Continuous 60-second rolling window (KB/s)</p>
+                        </div>
+                        <div class="flex items-center space-x-3 text-xs font-mono font-medium">
+                            <span class="flex items-center space-x-1.5 text-[#00e5ff]">
+                                <span class="w-2.5 h-1 bg-[#00e5ff] rounded-full"></span>
+                                <span>Download (RX)</span>
+                            </span>
+                            <span class="flex items-center space-x-1.5 text-[#f59e0b]">
+                                <span class="w-2.5 h-1 bg-[#f59e0b] rounded-full"></span>
+                                <span>Upload (TX)</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="h-56 w-full">
+                        <canvas id="bandwidthChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Packet Rate Chart (1 Column) -->
+                <div class="glass-panel p-4 rounded-xl border border-[#222a3d] flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <h3 class="font-bold text-white text-sm">Packet Throughput</h3>
+                            <p class="text-[11px] text-slate-400">Packets in / out per second</p>
+                        </div>
+                        <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                    </div>
+
+                    <div class="h-56 w-full">
+                        <canvas id="packetsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Analytics Row (Protocol Breakdown, Sockets, Endpoints) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                <!-- Protocol Distribution -->
+                <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                    <h4 class="font-bold text-white text-xs mb-0.5">Protocol Breakdown</h4>
+                    <p class="text-[11px] text-slate-400 mb-2">Distribution across active sockets</p>
+                    <div class="h-40 w-full">
+                        <canvas id="protocolChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Socket States -->
+                <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                    <h4 class="font-bold text-white text-xs mb-0.5">Socket States</h4>
+                    <p class="text-[11px] text-slate-400 mb-2">Connection lifecycle status</p>
+                    <div class="h-40 w-full">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Top Remote Endpoints -->
+                <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                    <div class="flex items-center justify-between mb-0.5">
+                        <h4 class="font-bold text-white text-xs">Top Remote Endpoints</h4>
+                        <span class="text-[11px] text-[#00e5ff] font-mono font-semibold">Active IPs</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mb-2">Highest connection frequency endpoints</p>
+                    <div id="topTalkersList" class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- TAB 2: LIVE IP FINDER (LAN SCANNER)        -->
+        <!-- ========================================== -->
+        <section id="tab-scanner" class="tab-content hidden space-y-3.5">
+            <!-- Scan Control Card -->
+            <div class="glass-panel p-4 rounded-xl border border-[#222a3d]">
+                <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+                    <div class="flex items-center space-x-3">
+                        <div id="scanRadarIcon"
+                            class="w-10 h-10 rounded-lg bg-[#181d2c] border border-[#222a3d] flex items-center justify-center text-[#00e5ff] text-lg transition">
+                            <i class="fa-solid fa-network-wired"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-white text-base">Subnet Host Discovery</h3>
+                            <p class="text-xs text-slate-300">Scan local IPv4 subnet to identify active devices,
+                                hardware vendors, latency, and exposed ports.</p>
+                            <div class="mt-0.5 text-xs text-slate-400 font-mono">
+                                Local Host: <span id="scannerLocalIp"
+                                    class="text-[#00e5ff] font-semibold">Detecting...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Target CIDR & Actions -->
+                    <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+                        <div
+                            class="flex items-center space-x-2 bg-[#181d2c] px-3 py-1.5 rounded-lg border border-[#222a3d]">
+                            <span class="text-xs text-slate-300 font-mono">Subnet:</span>
+                            <input id="subnetCidrInput" type="text" placeholder="192.168.1.0/24" value="192.168.1.0/24"
+                                class="bg-transparent text-sm font-mono text-[#00e5ff] outline-none w-36 font-semibold">
+                        </div>
+
+                        <button id="btnStartScan" onclick="startSubnetScan()"
+                            class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition shadow-sm flex items-center">
+                            <i class="fa-solid fa-magnifying-glass mr-1.5"></i> Scan Subnet
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Scan Progress Bar -->
+                <div id="scanProgressContainer" class="mt-3 hidden">
+                    <div class="flex items-center justify-between text-xs text-slate-300 mb-1">
+                        <span class="flex items-center space-x-2">
+                            <i class="fa-solid fa-spinner fa-spin text-[#00e5ff]"></i>
+                            <span>Scanning subnet address space in parallel...</span>
+                        </span>
+                        <span id="scanProgressText" class="font-mono text-[#00e5ff] font-bold">0%</span>
+                    </div>
+                    <div class="w-full h-2 rounded-full bg-[#181d2c] overflow-hidden border border-[#222a3d]">
+                        <div id="scanProgressBar"
+                            class="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-300 w-0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Host Search and Filters -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="relative w-64 sm:w-80">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input id="hostSearchInput" oninput="filterHosts()" type="text"
+                            placeholder="Search by IP, MAC, Vendor or Hostname..."
+                            class="w-full bg-[#131722] border border-[#222a3d] rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-400 outline-none focus:border-[#00e5ff] transition">
+                    </div>
+                </div>
+
+                <div class="text-xs text-slate-300">
+                    Discovered: <span id="discoveredHostsCount" class="font-mono font-bold text-white">0</span>
+                    endpoints
+                </div>
+            </div>
+
+            <!-- Comprehensive Hosts Table View with 100vh scrollable height -->
+            <div class="glass-panel rounded-xl border border-[#222a3d] overflow-hidden">
+                <div class="p-3 border-b border-[#222a3d] bg-[#181d2c] flex items-center justify-between">
+                    <h4 class="font-bold text-white text-xs uppercase tracking-wide">Discovered Hosts Inventory</h4>
+                </div>
+                <div class="max-h-[calc(100vh-290px)] overflow-y-auto">
+                    <table class="w-full text-left">
+                        <thead
+                            class="sticky top-0 bg-[#0e121b] border-b border-[#222a3d] text-xs uppercase tracking-wider text-slate-300 font-semibold font-mono z-10">
+                            <tr>
+                                <th class="py-2.5 px-4">IP Address</th>
+                                <th class="py-2.5 px-4">Hostname</th>
+                                <th class="py-2.5 px-4">MAC Address</th>
+                                <th class="py-2.5 px-4">Device Manufacturer</th>
+                                <th class="py-2.5 px-4">Latency</th>
+                                <th class="py-2.5 px-4">Role</th>
+                                <th class="py-2.5 px-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hostsTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Hosts Grid (Cards) -->
+            <div id="hostsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <!-- Populated dynamically -->
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- TAB 3: ACTIVE SOCKETS & PROCESSES          -->
+        <!-- ========================================== -->
+        <section id="tab-connections" class="tab-content hidden space-y-3.5">
+            <div class="glass-panel p-4 rounded-xl border border-[#222a3d]">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-3">
+                    <div>
+                        <h3 class="font-bold text-white text-base flex items-center space-x-2">
+                            <i class="fa-solid fa-diagram-project text-[#00e5ff]"></i>
+                            <span>Active Socket Connections &amp; Process Attribution</span>
+                        </h3>
+                        <p class="text-xs text-slate-300">Inspect local socket bindings, foreign endpoints, protocol
+                            states, and attributed system process IDs.</p>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="relative w-full md:w-72">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input id="connSearchInput" oninput="handleConnectionSearch(this.value)" type="text"
+                            placeholder="Filter by IP, process, or port..."
+                            class="w-full bg-[#181d2c] border border-[#222a3d] rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-400 outline-none focus:border-[#00e5ff] transition">
+                    </div>
+                </div>
+
+                <!-- Filter Pills -->
+                <div class="flex flex-wrap items-center justify-between gap-2 border-t border-[#222a3d] pt-3">
+                    <div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
+                        <button onclick="setConnectionFilter('ALL')" data-filter="ALL"
+                            class="filter-btn px-2.5 py-1 rounded bg-cyan-600 text-white border border-cyan-500 font-semibold transition">ALL</button>
+                        <button onclick="setConnectionFilter('ESTABLISHED')" data-filter="ESTABLISHED"
+                            class="filter-btn px-2.5 py-1 rounded bg-[#181d2c] text-slate-300 hover:text-white border border-[#222a3d] transition">ESTABLISHED</button>
+                        <button onclick="setConnectionFilter('LISTEN')" data-filter="LISTEN"
+                            class="filter-btn px-2.5 py-1 rounded bg-[#181d2c] text-slate-300 hover:text-white border border-[#222a3d] transition">LISTEN</button>
+                        <button onclick="setConnectionFilter('TIME_WAIT')" data-filter="TIME_WAIT"
+                            class="filter-btn px-2.5 py-1 rounded bg-[#181d2c] text-slate-300 hover:text-white border border-[#222a3d] transition">TIME_WAIT</button>
+                        <button onclick="setConnectionFilter('CLOSE_WAIT')" data-filter="CLOSE_WAIT"
+                            class="filter-btn px-2.5 py-1 rounded bg-[#181d2c] text-slate-300 hover:text-white border border-[#222a3d] transition">CLOSE_WAIT</button>
+                        <button onclick="setConnectionFilter('UDP')" data-filter="UDP"
+                            class="filter-btn px-2.5 py-1 rounded bg-[#181d2c] text-slate-300 hover:text-white border border-[#222a3d] transition">UDP
+                            Sockets</button>
+                    </div>
+
+                    <div class="flex items-center space-x-2 text-xs text-slate-300">
+                        <span id="connFilteredCount" class="font-mono text-slate-200">Loading connections...</span>
+                        <button onclick="loadConnections()"
+                            class="px-2.5 py-1 rounded bg-[#181d2c] hover:bg-[#20273b] border border-[#222a3d] text-slate-200 transition"
+                            title="Refresh Table">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connections Table (100vh fitted scrollable container) -->
+            <div class="glass-panel rounded-xl border border-[#222a3d] overflow-hidden">
+                <div class="max-h-[calc(100vh-230px)] overflow-y-auto">
+                    <table class="w-full text-left">
+                        <thead
+                            class="sticky top-0 bg-[#0e121b] border-b border-[#222a3d] text-xs uppercase tracking-wider text-slate-300 font-semibold font-mono z-10">
+                            <tr>
+                                <th class="py-2.5 px-4">Proto</th>
+                                <th class="py-2.5 px-4">Local Address</th>
+                                <th class="py-2.5 px-4">Remote Endpoint &amp; Hostname</th>
+                                <th class="py-2.5 px-4">Status</th>
+                                <th class="py-2.5 px-4">Process Name &amp; PID</th>
+                                <th class="py-2.5 px-4">Service</th>
+                                <th class="py-2.5 px-4 text-right">Inspect</th>
+                            </tr>
+                        </thead>
+                        <tbody id="connectionsTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- TAB 4: PACKET CAPTURE & PCAP INSPECTOR     -->
+        <!-- ========================================== -->
+        <section id="tab-sniffer" class="tab-content hidden space-y-3.5">
+            <!-- Unprivileged Notification Banner -->
+            <div id="snifferPermBanner"
+                class="hidden glass-panel p-3 rounded-xl border border-amber-700/80 bg-amber-950/40 text-xs text-amber-200 flex items-start space-x-2.5">
+                <i class="fa-solid fa-circle-info text-amber-300 text-sm mt-0.5"></i>
+                <div class="flex-1">
+                    <span class="font-bold text-amber-100">Packet Capture Notice:</span>
+                    <p class="mt-0.5 text-slate-200">The current environment does not have raw kernel socket
+                        capabilities (`CAP_NET_RAW`). You can upload any <b>.pcap file</b>, use <b>Sample Packets</b>,
+                        or grant Linux capture capabilities with:</p>
+                    <code
+                        class="block mt-1 px-2.5 py-1 rounded bg-black/70 font-mono text-[#00e5ff] text-xs border border-slate-700">sudo setcap cap_net_raw,cap_net_admin=eip $(which python3)</code>
+                </div>
+            </div>
+
+            <!-- Sniffer Toolbar -->
+            <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+                    <!-- Left: Status and BPF filter -->
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <button id="btnToggleSniff" onclick="toggleLiveSniff()"
+                            class="px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition flex items-center shadow-sm">
+                            <i class="fa-solid fa-play mr-1.5 text-emerald-300"></i> Start Live Capture
+                        </button>
+
+                        <div
+                            class="flex items-center space-x-2 bg-[#181d2c] px-2.5 py-1.5 rounded-lg border border-[#222a3d] text-xs">
+                            <span class="text-slate-300 font-mono">BPF Filter:</span>
+                            <input id="bpfFilterInput" type="text" placeholder="e.g. tcp and port 443"
+                                class="bg-transparent text-[#00e5ff] font-mono outline-none w-44 font-medium">
+                        </div>
+
+                        <button onclick="clearPacketBuffer()"
+                            class="px-3 py-1.5 rounded-lg bg-[#181d2c] hover:bg-[#20273b] border border-[#222a3d] text-slate-200 text-xs font-medium transition">
+                            <i class="fa-solid fa-trash-can mr-1"></i> Clear
+                        </button>
+
+                        <button onclick="generateDemoTraffic()"
+                            class="px-3 py-1.5 rounded-lg bg-[#181d2c] hover:bg-[#20273b] border border-[#222a3d] text-slate-200 text-xs font-medium transition">
+                            <i class="fa-solid fa-flask mr-1 text-[#00e5ff]"></i> Sample Packets
+                        </button>
+                    </div>
+
+                    <!-- Right: PCAP Upload & Export -->
+                    <div class="flex items-center space-x-2.5">
+                        <label
+                            class="px-3 py-1.5 rounded-lg bg-[#181d2c] hover:bg-[#20273b] text-slate-200 text-xs font-medium transition cursor-pointer flex items-center border border-[#222a3d]">
+                            <i class="fa-solid fa-file-arrow-up mr-1.5 text-[#00e5ff]"></i> Upload PCAP
+                            <input type="file" accept=".pcap,.pcapng,.cap" onchange="uploadPcapFile(event)"
+                                class="hidden">
+                        </label>
+                        <span id="uploadPcapStatus" class="text-xs text-slate-300 font-mono"></span>
+
+                        <button onclick="exportPcapFile()"
+                            class="px-3 py-1.5 rounded-lg bg-[#181d2c] hover:bg-[#20273b] text-slate-200 text-xs font-medium transition flex items-center border border-[#222a3d]">
+                            <i class="fa-solid fa-file-export mr-1.5 text-emerald-400"></i> Export PCAP
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Protocol Filter Pills & Stats -->
+                <div class="flex flex-wrap items-center justify-between gap-2 border-t border-[#222a3d] pt-2.5 mt-2.5">
+                    <div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
+                        <button onclick="filterPacketsByProto('ALL')" data-proto="ALL"
+                            class="sniff-filter-btn px-2.5 py-0.5 rounded bg-cyan-600 text-white font-bold">ALL</button>
+                        <button onclick="filterPacketsByProto('TCP')" data-proto="TCP"
+                            class="sniff-filter-btn px-2.5 py-0.5 rounded bg-[#181d2c] text-slate-300 hover:text-white border border-[#222a3d]">TCP</button>
+                        <button onclick="filterPacketsByProto('UDP')" data-proto="UDP"
+                            class="sniff-filter-btn px-2.5 py-0.5 rounded bg-[#181d2c] text-slate-300 hover:text-white border border-[#222a3d]">UDP</button>
+                        <button onclick="filterPacketsByProto('ICMP')" data-proto="ICMP"
+                            class="sniff-filter-btn px-2.5 py-0.5 rounded bg-[#181d2c] text-slate-300 hover:text-white border border-[#222a3d]">ICMP</button>
+                        <button onclick="filterPacketsByProto('DNS')" data-proto="DNS"
+                            class="sniff-filter-btn px-2.5 py-0.5 rounded bg-[#181d2c] text-slate-300 hover:text-white border border-[#222a3d]">DNS</button>
+                    </div>
+
+                    <div class="flex items-center space-x-3 text-xs font-mono text-slate-300">
+                        <div>Buffered: <span id="sniffTotalCount" class="font-bold text-white">0</span> pkts</div>
+                        <div>Volume: <span id="sniffTotalBytes" class="font-bold text-[#00e5ff]">0 KB</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Packet Stream & Inspector Grid (100vh fitted height) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+                <!-- Packet Table (7 Cols) -->
+                <div class="lg:col-span-7 glass-panel rounded-xl border border-[#222a3d] overflow-hidden">
+                    <div class="p-2.5 border-b border-[#222a3d] bg-[#181d2c] flex items-center justify-between">
+                        <span class="text-xs font-bold text-white">Packet Capture Stream</span>
+                        <span class="text-xs text-slate-400">Select packet to inspect layers and payload</span>
+                    </div>
+                    <div class="h-[calc(100vh-270px)] min-h-[300px] overflow-y-auto">
+                        <table class="w-full text-left">
+                            <thead
+                                class="sticky top-0 bg-[#0e121b] border-b border-[#222a3d] text-xs uppercase tracking-wider text-slate-300 font-mono z-10">
+                                <tr>
+                                    <th class="py-2 px-3">#</th>
+                                    <th class="py-2 px-3">Time</th>
+                                    <th class="py-2 px-3">Proto</th>
+                                    <th class="py-2 px-3">Source</th>
+                                    <th class="py-2 px-3">Destination</th>
+                                    <th class="py-2 px-3">Len</th>
+                                    <th class="py-2 px-3">Info</th>
+                                </tr>
+                            </thead>
+                            <tbody id="packetsTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Deep Packet Inspector Panel (5 Cols) -->
+                <div id="packetInspectorDrawer"
+                    class="lg:col-span-5 glass-panel p-3.5 rounded-xl border border-[#222a3d] flex flex-col justify-between hidden lg:flex h-[calc(100vh-270px)] min-h-[300px] overflow-y-auto">
+                    <div>
+                        <div class="flex items-center justify-between pb-2 mb-2 border-b border-[#222a3d]">
+                            <div class="flex items-center space-x-2">
+                                <span id="inspectPktId" class="font-mono font-bold text-[#00e5ff] text-base">#0</span>
+                                <span id="inspectPktProto"
+                                    class="px-2 py-0.5 rounded text-xs bg-[#181d2c] text-slate-200 border border-[#222a3d] font-mono font-bold">TCP</span>
+                            </div>
+                            <div class="text-xs text-slate-300 font-mono">
+                                <span id="inspectPktTime">-</span> | <span id="inspectPktLen">-</span>
+                            </div>
+                        </div>
+
+                        <!-- Layer Tree Hierarchy -->
+                        <h5 class="text-xs font-bold text-slate-200 mb-1.5">Protocol Tree Breakdown</h5>
+                        <div id="inspectLayerTree" class="space-y-1.5 mb-3">
+                            <!-- Populated dynamically -->
+                        </div>
+
+                        <!-- Hex Dump Viewer -->
+                        <div class="flex items-center justify-between mb-1">
+                            <h5 class="text-xs font-bold text-slate-200">Payload Hex &amp; ASCII</h5>
+                            <span class="text-xs text-slate-400 font-mono">0000..01FF</span>
+                        </div>
+                        <pre id="inspectHexdump" class="hexdump-viewer max-h-48"></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- TAB 5: FIREWALL & IP/DOMAIN BLOCKER        -->
+        <!-- ========================================== -->
+        <section id="tab-firewall" class="tab-content hidden space-y-3.5">
+            <!-- Firewall Quick Stats Row -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                    <div class="flex items-center justify-between text-slate-300 mb-1">
+                        <span class="text-xs font-semibold text-slate-300">Total Block Rules</span>
+                        <div
+                            class="w-6 h-6 rounded-md bg-[#0c2636] border border-[#0e4a5c] flex items-center justify-center text-[#00e5ff] text-xs">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-1.5">
+                        <span id="fwTotalRules" class="font-mono text-2xl font-extrabold text-white">0</span>
+                        <span class="text-xs text-slate-400">rules</span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-400">
+                        <span>Configured access control filters</span>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                    <div class="flex items-center justify-between text-slate-300 mb-1">
+                        <span class="text-xs font-semibold text-slate-300">Blocked IP Addresses</span>
+                        <div
+                            class="w-6 h-6 rounded-md bg-[#33220a] border border-[#5c3d0e] flex items-center justify-center text-[#f59e0b] text-xs">
+                            <i class="fa-solid fa-network-wired"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-1.5">
+                        <span id="fwBlockedIps" class="font-mono text-2xl font-extrabold text-white">0</span>
+                        <span class="text-xs text-[#f59e0b] font-mono font-semibold">IPs</span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-400">
+                        <span>Host &amp; subnet level drop policies</span>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                    <div class="flex items-center justify-between text-slate-300 mb-1">
+                        <span class="text-xs font-semibold text-slate-300">Blocked Websites</span>
+                        <div
+                            class="w-6 h-6 rounded-md bg-[#082c38] border border-[#0e4a5c] flex items-center justify-center text-[#00e5ff] text-xs">
+                            <i class="fa-solid fa-globe"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-1.5">
+                        <span id="fwBlockedDomains" class="font-mono text-2xl font-extrabold text-white">0</span>
+                        <span class="text-xs text-[#00e5ff] font-mono font-semibold">domains</span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-400">
+                        <span>C2, ads &amp; phishing web targets</span>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-3.5 rounded-xl border border-[#222a3d]">
+                    <div class="flex items-center justify-between text-slate-300 mb-1">
+                        <span class="text-xs font-semibold text-slate-300">Probes Intercepted</span>
+                        <div
+                            class="w-6 h-6 rounded-md bg-[#330f18] border border-[#5c1626] flex items-center justify-center text-[#f43f5e] text-xs">
+                            <i class="fa-solid fa-ban"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-1.5">
+                        <span id="fwTotalHits" class="font-mono text-2xl font-extrabold text-[#f43f5e]">0</span>
+                        <span class="text-xs text-slate-400">dropped</span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-400">
+                        <span>Intercepted unauthorized connection attempts</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Block Target Control Card -->
+            <div class="glass-panel p-4 rounded-xl border border-[#222a3d]">
+                <div class="flex items-center justify-between mb-3 pb-2 border-b border-[#222a3d]">
+                    <div>
+                        <h3 class="font-bold text-white text-base flex items-center space-x-2">
+                            <i class="fa-solid fa-shield-virus text-[#00e5ff]"></i>
+                            <span>Add New IP or Website Block Rule</span>
+                        </h3>
+                        <p class="text-xs text-slate-300">Immediately drop inbound/outbound packets to specific IP
+                            addresses or intercept web domain lookups.</p>
+                    </div>
+                </div>
+
+                <!-- Input Form -->
+                <form onsubmit="handleAddBlockRule(event)" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <!-- Target Input -->
+                    <div class="md:col-span-5">
+                        <label class="block text-xs font-medium text-slate-300 mb-1 font-mono">Target IP or Website
+                            Domain:</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-crosshairs absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                            <input id="fwTargetInput" type="text" placeholder="e.g. 185.220.101.5 or malware-c2.net"
+                                class="w-full bg-[#181d2c] border border-[#222a3d] rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-400 outline-none focus:border-[#00e5ff] font-mono transition">
+                        </div>
+                    </div>
+
+                    <!-- Type Selector -->
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-medium text-slate-300 mb-1 font-mono">Target Type:</label>
+                        <select id="fwTypeSelect"
+                            class="w-full bg-[#181d2c] border border-[#222a3d] rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-[#00e5ff] font-mono cursor-pointer transition">
+                            <option value="auto">Auto-Detect</option>
+                            <option value="ip">IP Address</option>
+                            <option value="domain">Website / Domain</option>
+                        </select>
+                    </div>
+
+                    <!-- Reason / Classification -->
+                    <div class="md:col-span-3">
+                        <label class="block text-xs font-medium text-slate-300 mb-1 font-mono">Security Reason /
+                            Note:</label>
+                        <input id="fwReasonInput" type="text" placeholder="e.g. Suspicious scan probe, Malicious C2"
+                            class="w-full bg-[#181d2c] border border-[#222a3d] rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-400 outline-none focus:border-[#00e5ff] transition">
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="md:col-span-2">
+                        <button type="submit"
+                            class="w-full py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition shadow-sm flex items-center justify-center">
+                            <i class="fa-solid fa-ban mr-1.5"></i> Block Target
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Threat Presets -->
+                <div class="mt-3 pt-3 border-t border-[#222a3d] flex flex-wrap items-center gap-2 text-xs">
+                    <span class="text-slate-400 font-mono text-[11px]">Quick Threat Presets:</span>
+                    <button type="button"
+                        onclick="quickPresetBlock('185.220.101.5', 'ip', 'Known Tor Exit Node & Port Scanner')"
+                        class="px-2.5 py-1 rounded bg-[#181d2c] hover:bg-[#20273b] border border-[#222a3d] text-slate-300 hover:text-white transition text-xs flex items-center">
+                        <i class="fa-solid fa-shield mr-1 text-[#f59e0b]"></i> Tor Exit Node
+                    </button>
+                    <button type="button"
+                        onclick="quickPresetBlock('c2-beacon-malware.org', 'domain', 'Malicious C2 Command & Control Beacon')"
+                        class="px-2.5 py-1 rounded bg-[#181d2c] hover:bg-[#20273b] border border-[#222a3d] text-slate-300 hover:text-white transition text-xs flex items-center">
+                        <i class="fa-solid fa-bug mr-1 text-[#f43f5e]"></i> Malware C2 Host
+                    </button>
+                    <button type="button"
+                        onclick="quickPresetBlock('tracker.analytics-spy.net', 'domain', 'Aggressive Ad & User Behavioral Tracker')"
+                        class="px-2.5 py-1 rounded bg-[#181d2c] hover:bg-[#20273b] border border-[#222a3d] text-slate-300 hover:text-white transition text-xs flex items-center">
+                        <i class="fa-solid fa-eye mr-1 text-[#00e5ff]"></i> Ad Tracker Domain
+                    </button>
+                    <button type="button"
+                        onclick="quickPresetBlock('198.51.100.77', 'ip', 'Repeated Unauthorized RDP Probing')"
+                        class="px-2.5 py-1 rounded bg-[#181d2c] hover:bg-[#20273b] border border-[#222a3d] text-slate-300 hover:text-white transition text-xs flex items-center">
+                        <i class="fa-solid fa-lock mr-1 text-purple-400"></i> Brute Force Bot
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active Rules Table -->
+            <div class="glass-panel rounded-xl border border-[#222a3d] overflow-hidden">
+                <div class="p-3 border-b border-[#222a3d] bg-[#181d2c] flex items-center justify-between">
+                    <div>
+                        <h4 class="font-bold text-white text-xs uppercase tracking-wide">Configured Firewall Blocklist
+                        </h4>
+                    </div>
+                    <div class="relative w-64">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input id="fwSearchInput" oninput="filterFirewallRules(this.value)" type="text"
+                            placeholder="Filter rules by target or reason..."
+                            class="w-full bg-[#131722] border border-[#222a3d] rounded-lg pl-9 pr-3 py-1 text-xs text-slate-100 placeholder-slate-400 outline-none focus:border-[#00e5ff] transition">
+                    </div>
+                </div>
+
+                <div class="max-h-[calc(100vh-320px)] overflow-y-auto">
+                    <table class="w-full text-left">
+                        <thead
+                            class="sticky top-0 bg-[#0e121b] border-b border-[#222a3d] text-xs uppercase tracking-wider text-slate-300 font-semibold font-mono z-10">
+                            <tr>
+                                <th class="py-2.5 px-4">Target (IP / Website)</th>
+                                <th class="py-2.5 px-4">Type</th>
+                                <th class="py-2.5 px-4">Classification / Reason</th>
+                                <th class="py-2.5 px-4">Date Configured</th>
+                                <th class="py-2.5 px-4">Interceptions</th>
+                                <th class="py-2.5 px-4">Policy Status</th>
+                                <th class="py-2.5 px-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="firewallTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- TAB 6: HEALTH & DIAGNOSTICS                -->
+        <!-- ========================================== -->
+        <section id="tab-diagnostics" class="tab-content hidden space-y-3.5">
+            <!-- Ping Latency Targets -->
+            <div>
+                <h3 class="font-bold text-white text-base mb-1">Network Health &amp; Latency Telemetry</h3>
+                <p class="text-xs text-slate-300 mb-3">Round-trip latency, jitter, and packet loss metrics to key
+                    infrastructure endpoints.</p>
+                <div id="latencyTargetsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- DNS Resolution Benchmark -->
+            <div class="glass-panel p-4 rounded-xl border border-[#222a3d]">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h4 class="font-bold text-white text-sm">DNS Resolution Speed Benchmark</h4>
+                        <p class="text-xs text-slate-300">Lookup response times for major Internet domains via local
+                            resolver.</p>
+                    </div>
+                    <button onclick="runDnsBenchmark()"
+                        class="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition">
+                        <i class="fa-solid fa-arrows-rotate mr-1"></i> Retest DNS
+                    </button>
+                </div>
+                <div id="dnsBenchmarkList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Interface Hardware Explorer -->
+            <div>
+                <h4 class="font-bold text-white text-sm mb-1">Network Interface Hardware &amp; Counters</h4>
+                <p class="text-xs text-slate-300 mb-3">Physical and virtual adapters, MTU configurations, transfer
+                    volume, and packet error metrics.</p>
+                <div id="interfacesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- TAB 7: PERMISSIONS & TERMINAL GUIDE        -->
+        <!-- ========================================== -->
+        <section id="tab-settings" class="tab-content hidden space-y-4">
+            <div class="glass-panel p-5 rounded-xl border border-[#222a3d] max-w-4xl mx-auto space-y-4">
+                <div>
+                    <h3 class="font-bold text-white text-base flex items-center space-x-2">
+                        <i class="fa-solid fa-shield-halved text-[#00e5ff]"></i>
+                        <span>System Privileges &amp; Operational Modes</span>
+                    </h3>
+                    <p class="text-xs text-slate-300 mt-0.5">CyberNinjas executes in two operating modes depending on
+                        system kernel capabilities.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <!-- Mode 1 -->
+                    <div class="p-3.5 rounded-xl bg-[#181d2c] border border-[#222a3d]">
+                        <div class="flex items-center space-x-2 text-emerald-300 font-bold text-xs mb-1.5">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span>1. Standard User Mode (Active)</span>
+                        </div>
+                        <p class="text-xs text-slate-200 leading-relaxed">
+                            Executes without root or sudo privileges. Collects real-time interface throughput,
+                            upload/download metrics, active socket connections, process attribution, subnet discovery,
+                            firewall blocklists, and PCAP file analysis.
+                        </p>
+                    </div>
+
+                    <!-- Mode 2 -->
+                    <div class="p-3.5 rounded-xl bg-[#181d2c] border border-[#222a3d]">
+                        <div class="flex items-center space-x-2 text-[#00e5ff] font-bold text-xs mb-1.5">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span>2. Kernel Raw Socket Mode (Optional)</span>
+                        </div>
+                        <p class="text-xs text-slate-200 leading-relaxed">
+                            Enables raw promiscuous packet capture via kernel AF_PACKET sockets. Requires either running
+                            with administrative privileges or granting the Python binary specific Linux capabilities.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Command snippet -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-200">Granting Linux Raw Socket Capability:</label>
+                    <div
+                        class="p-3 rounded-xl bg-black/70 border border-[#222a3d] font-mono text-xs text-[#00e5ff] flex items-center justify-between">
+                        <code>sudo setcap cap_net_raw,cap_net_admin=eip $(which python3)</code>
+                        <button
+                            onclick="navigator.clipboard.writeText('sudo setcap cap_net_raw,cap_net_admin=eip $(which python3)')"
+                            class="text-slate-300 hover:text-white" title="Copy Command">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-400">This grants the Python runtime packet capture capabilities without
+                        requiring full root execution.</p>
+                </div>
+
+                <div class="pt-3 border-t border-[#222a3d] flex justify-between items-center text-xs text-slate-300">
+                    <span>CyberNinjas Network Security Operations Platform</span>
+                    <button onclick="window.location.reload()"
+                        class="px-3 py-1.5 rounded-lg bg-[#181d2c] text-slate-200 hover:text-white border border-[#222a3d] transition font-medium">
+                        Reload Application
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Fixed Modern 100vh Footer -->
+    <footer
+        class="bg-[#0b0e15] border-t border-[#222a3d] px-4 py-2 shrink-0 flex items-center justify-between text-xs text-slate-400 z-30">
+        <div class="flex items-center space-x-3">
+            <a href="#" class="cyberninjas-footer-brand flex items-center space-x-2.5 group select-none cursor-pointer">
+                <img src="/static/cyber/3d.gif" alt="CyberNinjas Emblem"
+                    class="cyberninjas-footer-logo-mark h-6 w-6 object-contain pointer-events-none">
+                <img src="/static/cyber/logo2.png" alt="CyberNinjas"
+                    class="cyberninjas-footer-logo-text h-4 sm:h-4.5 w-auto max-w-[130px] sm:max-w-[150px] object-contain">
+            </a>
+            <span class="text-slate-600">|</span>
+            <span class="hidden sm:inline text-slate-400">Real-Time Telemetry &amp; Access Control Active</span>
+            <span class="hidden md:inline text-slate-600">|</span>
+            <span class="hidden md:flex text-emerald-400 font-mono text-[11px] items-center space-x-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-live-pulse"></span>
+                <span>Security Engine Online</span>
+            </span>
+        </div>
+        <div class="flex items-center space-x-3">
+            <button onclick="openMeetDevelopersModal()"
+                class="text-xs px-3 py-1 rounded-lg bg-[#181d2c] hover:bg-cyan-950 text-[#00e5ff] hover:text-white border border-[#222a3d] hover:border-cyan-700 transition flex items-center font-semibold shadow-sm">
+                <i class="fa-solid fa-users mr-1.5"></i> Meet Developers
+            </button>
+            <span class="text-slate-500 font-mono text-[11px]">&copy; 2026 CyberNinjas</span>
+        </div>
+    </footer>
+
+    <!-- Host Port Scanner Modal -->
+    <div id="portScanModal"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="glass-panel w-full max-w-xl rounded-2xl border border-[#222a3d] p-5 shadow-2xl space-y-3.5">
+            <div class="flex items-center justify-between pb-2.5 border-b border-[#222a3d]">
+                <div class="flex items-center space-x-2.5">
+                    <div
+                        class="w-7 h-7 rounded-lg bg-cyan-950 border border-cyan-800 flex items-center justify-center text-[#00e5ff]">
+                        <i class="fa-solid fa-shield-halved text-xs"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-white text-sm">Port Scanner</h4>
+                        <div class="text-xs text-slate-300">Target: <span id="portScanTargetIp"
+                                class="font-mono text-[#00e5ff] font-bold">-</span></div>
+                    </div>
+                </div>
+                <button onclick="closePortScanner()" class="text-slate-400 hover:text-white text-base">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="portScanSpinner" class="py-6 text-center text-slate-300">
+                <i class="fa-solid fa-spinner fa-spin text-xl text-[#00e5ff] mb-1.5"></i>
+                <p class="text-xs font-mono">Probing standard network service ports...</p>
+            </div>
+
+            <!-- Results container -->
+            <div id="portScanResults" class="max-h-64 overflow-y-auto pr-1">
+                <!-- Populated dynamically -->
+            </div>
+
+            <div class="pt-2.5 border-t border-[#222a3d] flex justify-end">
+                <button onclick="closePortScanner()"
+                    class="px-3.5 py-1.5 rounded-lg bg-[#181d2c] hover:bg-[#20273b] text-white text-xs font-semibold border border-[#222a3d] transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meet Developers Modal (Displays 4 Profiles with Photo, Name, About) -->
+    <div id="meetDevelopersModal"
+        class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div
+            class="glass-panel w-full max-w-5xl rounded-2xl border border-[#222a3d] p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-[#222a3d]">
+                <div class="flex items-center space-x-3">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-950 to-slate-900 border border-cyan-800 flex items-center justify-center text-[#00e5ff] shadow-sm">
+                        <i class="fa-solid fa-users text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-white text-lg flex items-center space-x-2">
+                            <span>Meet the Developers</span>
+                            <span
+                                class="text-xs px-2 py-0.5 rounded bg-cyan-950 text-[#00e5ff] border border-cyan-800 font-mono font-semibold">CORE
+                                TEAM</span>
+                        </h3>
+                        <p class="text-xs text-slate-400">The engineering architects behind the CyberNinjas Network
+                            Security Platform.</p>
+                    </div>
+                </div>
+                <button onclick="closeMeetDevelopersModal()"
+                    class="w-8 h-8 rounded-lg bg-[#181d2c] hover:bg-[#222a3d] border border-[#222a3d] text-slate-400 hover:text-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- 4 Developer Profiles Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Profile 1: Ashish Chahar -->
+                <div
+                    class="glass-panel-interactive rounded-xl p-4 border border-[#222a3d] flex flex-col justify-between">
+                    <div>
+                        <!-- Avatar / Photo -->
+                        <div class="relative w-24 h-24 mx-auto mb-3">
+                            <img src="/static/img/ashishchahar.jpeg" alt="Ashish Chahar"
+                                onerror="this.onerror=null; this.src='/static/img/ashishchahar.jpeg';"
+                                class="w-24 h-24 rounded-full object-cover border-2 border-[#00e5ff]/60 shadow-lg shadow-cyan-950/50">
+                            <span
+                                class="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-[#131722] rounded-full"
+                                title="Online & Active"></span>
+                        </div>
+
+                        <div class="text-center mb-2.5">
+                            <h4 class="font-bold text-white text-base">Ashish Chahar</h4>
+                            <span
+                                class="inline-block text-[11px] font-semibold text-[#00e5ff] px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800 font-mono mt-0.5">
+                                Lead Security Architect
+                            </span>
+                        </div>
+
+                        <!-- About -->
+                        <p class="text-xs text-slate-300 leading-relaxed text-center mb-3">
+                            Specializes in low-level Linux networking, raw socket capture drivers, and eBPF kernel
+                            telemetry with over 10 years in enterprise defense.
+                        </p>
+                    </div>
+
+                    <div>
+                        <!-- Skills / Tags -->
+                        <div class="flex flex-wrap gap-1 justify-center mb-3 pt-2 border-t border-[#222a3d]">
+                            <span
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-[#181d2c] text-slate-300 border border-[#222a3d] font-mono">Linux
+                                Kernel</span>
+                            <span
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-[#181d2c] text-slate-300 border border-[#222a3d] font-mono">Scapy</span>
+                            <span
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-[#181d2c] text-slate-300 border border-[#222a3d] font-mono">Raw
+                                Sockets</span>
+                        </div>
+
+                        <!-- Social / Contact Links -->
+                        <div class="flex items-center justify-center space-x-3 text-slate-400 text-sm">
+                            <a href="https://github.com/ashishchaharkhorrdia" target="_blank"
+                                class="hover:text-[#00e5ff] transition" title="GitHub"><i
+                                    class="fa-brands fa-github"></i></a>
+                            <a href="https://www.linkedin.com/in/ashish-chahar-b16ba430b" target="_blank"
+                                class="hover:text-[#00e5ff] transition" title="LinkedIn"><i
+                                    class="fa-brands fa-linkedin"></i></a>
+                            <a href="mailto:achaharkhorrdia@gmail.com" class="hover:text-[#00e5ff] transition"
+                                title="Email"><i class="fa-solid fa-envelope"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile 2: Abhay Patel -->
+                <div
+                    class="glass-panel-interactive rounded-xl p-4 border border-[#222a3d] flex flex-col justify-between">
+                    <div>
+                        <!-- Avatar / Photo -->
+                        <div class="relative w-24 h-24 mx-auto mb-3">
+                            <img src="/static/img/abhay.jpeg" alt="Abhay"
+                                onerror="this.onerror=null; this.src='/static/img/abhay.jpeg';"
+                                class="w-24 h-24 rounded-full object-cover border-2 border-[#f59e0b]/60 shadow-lg shadow-amber-950/50">
+                            <span
+                                class="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-[#131722] rounded-full"
+                                title="Online & Active"></span>
+                        </div>
+
+                        <div class="text-center mb-2.5">
+                            <h4 class="font-bold text-white text-base">Abhay Patel</h4>
+                            <span
+                                class="inline-block text-[11px] font-semibold text-[#f59e0b] px-2 py-0.5 rounded bg-amber-950/80 border border-amber-800 font-mono mt-0.5">
+                                Security Engineer
+                            </span>
+                        </div>
+
+                        <!-- About -->
+                        <p class="text-xs text-slate-300 leading-relaxed text-center mb-3">
+                            Focuses on deep packet inspection, automated intrusion signatures, and real-time behavioral
+                            anomaly discovery across distributed subnets.
+                        </p>
+                    </div>
+
+                    <div>
+                        <!-- Skills / Tags -->
+                        <div class="flex flex-wrap gap-1 justify-center mb-3 pt-2 border-t border-[#222a3d]">
+                            <span
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-[#181d2c] text-slate-300 border border-[#222a3d] font-mono">Threat
+                                Intel</span>
+                            <span
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-[#181d2c] text-slate-300 border border-[#222a3d] font-mono">PCAP
+                                Analysis</span>
+                            <span
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-[#181d2c] text-slate-300 border border-[#222a3d] font-mono">Forensics</span>
+                        </div>
+
+                        <!-- Social / Contact Links -->
+                        <div class="flex items-center justify-center space-x-3 text-slate-400 text-sm">
+                            <a href=" https://github.com/abhayrajpatel2109-arch" target="_blank"
+                                class="hover:text-[#f59e0b] transition" title="GitHub"><i
+                                    class="fa-brands fa-github"></i></a>
+                            <a href="https://www.linkedin.com/in/abhay-patel-874306378/" target="_blank"
+                                class="hover:text-[#f59e0b] transition" title="LinkedIn"><i
+                                    class="fa-brands fa-linkedin"></i></a>
+                            <a href="mailto:abhayrajpatel2109@gmail.com" class="hover:text-[#f59e0b] transition"
+                                title="Email"><i class="fa-solid fa-envelope"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile 3: Kiranjit Kaur -->
+                <div
+                    class="glass-panel-interactive rounded-xl p-4 border border-[#222a3d] flex flex-col justify-between">
+                    <div>
+                        <!-- Avatar / Photo -->
+                        <div class="relative w-24 h-24 mx-auto mb-3">
+                            <img src="/static/img/kiran.jpeg" alt="Kiran"
+                                onerror="this.onerror=null; this.src='/static/img/kiran.jpeg';"
+                                class="w-24 h-24 rounded-full object-cover border-2 border-[#10b981]/60 shadow-lg shadow-emerald-950/50">
+                            <span
+                                class="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-[#131722] rounded-full"
+                                title="Online & Active"></span>
+                        </div>
+
+                        <div class="text-center mb-2.5">
+                            <h4 class="font-bold text-white text-base">Kiranjit Kaur</h4>
+                            <span
+                                class="inline-block text-[11px] font-semibold text-[#10b981] px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800 font-mono mt-0.5">
+                                Senior Security Analyst
+                            </span>
+                        </div>
+
+                        <!-- About -->
+                        <p class="text-xs text-slate-300 leading-relaxed text-center mb-3">
+                            Architected the sub-millisecond asynchronous WebSocket broadcaster and multi-threaded
+                            parallel subnet discovery engine.
+                        </p>
+                    </div>
+
+                    <div>
+                        <!-- Skills / Tags -->
+                        <div class="flex flex-wrap gap-1 justify-center mb-3 pt-2 border-t border-[#222a3d]">
+                            <span
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-[#181d2c] text-slate-300 border border-[#222a3d] font-mono">FastAPI</span>
+                            <span
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-[#181d2c] text-slate-300 border border-[#222a3d] font-mono">AsyncIO</span>
+                            <span
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-[#181d2c] text-slate-300 border border-[#222a3d] font-mono">Low
+                                Latency</span>
+                        </div>
+
+                        <!-- Social / Contact Links -->
+                        <div class="flex items-center justify-center space-x-3 text-slate-400 text-sm">
+                            <a href="https://github.com/kiranjitkaur0707" target="_blank"
+                                class="hover:text-[#10b981] transition" title="GitHub"><i
+                                    class="fa-brands fa-github"></i></a>
+                            <a href="https://linkedin.com" target="_blank" class="hover:text-[#10b981] transition"
+                                title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+                            <a href="mailto:kirxnn.04@gmail.com" class="hover:text-[#10b981] transition"
+                                title="Email"><i class="fa-solid fa-envelope"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile 4: Gurpreet -->
+                <div
+                    class="glass-panel-interactive rounded-xl p-4 border border-[#222a3d] flex flex-col justify-between">
+                    <div>
+                        <!-- Avatar / Photo -->
+                        <div class="relative w-24 h-24 mx-auto mb-3">
+                            <img src="/static/img/gurp.jpeg" alt="Gurp"
+                                onerror="this.onerror=null; this.src='/static/img/gurp.jpeg';"
+                                class="w-24 h-24 rounded-full object-cover border-2 border-[#818cf8]/60 shadow-lg shadow-indigo-950/50">
+                            <span
+                                class="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-[#131722] rounded-full"
+                                title="Online & Active"></span>
+                        </div>
+
+                        <div class="text-center mb-2.5">
+                            <h4 class="font-bold text-white text-base">Gurpreet Singh</h4>
+                            <span
+                                class="inline-block text-[11px] font-semibold text-[#818cf8] px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-800 font-mono mt-0.5">
+                                Senior Security Engineer
+                            </span>
+                        </div>
+
+                        <!-- About -->
+                        <p class="text-xs text-slate-300 leading-relaxed text-center mb-3">
+                            Designs and builds the 100vh operations dashboard, interactive packet hierarchy trees, and
+                            accessible high-contrast visual telemetry.
+                        </p>
+                    </div>
+
+                    <div>
+                        <!-- Skills / Tags -->
+                        <div class="flex flex-wrap gap-1 justify-center mb-3 pt-2 border-t border-[#222a3d]">
+                            <span
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-[#181d2c] text-slate-300 border border-[#222a3d] font-mono">Tailwind
+                                CSS</span>
+                            <span
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-[#181d2c] text-slate-300 border border-[#222a3d] font-mono">Chart.js</span>
+                            <span
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-[#181d2c] text-slate-300 border border-[#222a3d] font-mono">Data
+                                Viz</span>
+                        </div>
+
+                        <!-- Social / Contact Links -->
+                        <div class="flex items-center justify-center space-x-3 text-slate-400 text-sm">
+                            <a href=" https://github.com/gurpreet-hack" target="_blank"
+                                class="hover:text-[#818cf8] transition" title="GitHub"><i
+                                    class="fa-brands fa-github"></i></a>
+                            <a href=" https://www.linkedin.com/in/gurpreet-mehta-70932b2a6/?isSelfProfile=true"
+                                target="_blank" class="hover:text-[#818cf8] transition" title="LinkedIn"><i
+                                    class="fa-brands fa-linkedin"></i></a>
+                            <a href="mailto: gurpreetmehta932@gmail.com" class="hover:text-[#818cf8] transition"
+                                title="Email"><i class="fa-solid fa-envelope"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="pt-3 border-t border-[#222a3d] flex justify-between items-center text-xs text-slate-400">
+                <span class="font-mono text-[11px]">CyberNinjas Engineering &bull; Distributed Systems &amp; Network
+                    Defense</span>
+                <button onclick="closeMeetDevelopersModal()"
+                    class="px-4 py-1.5 rounded-lg bg-[#181d2c] hover:bg-[#20273b] text-white text-xs font-semibold border border-[#222a3d] transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application JavaScript Modules -->
+    <script src="/static/js/charts.js"></script>
+    <script src="/static/js/scanner.js"></script>
+    <script src="/static/js/connections.js"></script>
+    <script src="/static/js/sniffer.js"></script>
+    <script src="/static/js/firewall.js"></script>
+    <script src="/static/js/diagnostics.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>
