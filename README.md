@@ -54,7 +54,7 @@
 ### 1. Installation
 Navigate to the project directory and install dependencies:
 ```bash
-cd /home/ashish/Desktop/pro
+cd /home/ashish/Desktop/network
 pip install -r requirements.txt
 ```
 
