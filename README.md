@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="frontend/src/components/Cyber%20ninjas.svg" alt="CyberNinjas Text Logo" width="320" />
+  <img src="Cyber%20ninjas.svg" alt="CyberNinjas Text Logo" width="320" />
 </div>#
 CyberNinjas - Network Traffic & Security Analysis Suite
 
