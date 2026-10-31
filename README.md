@@ -1,4 +1,7 @@
-# CyberNinjas - Network Traffic & Security Analysis Suite
+<div align="center">
+  <img src="frontend/src/components/Cyber%20ninjas.svg" alt="CyberNinjas Text Logo" width="320" />
+</div>#
+CyberNinjas - Network Traffic & Security Analysis Suite
 
 **CyberNinjas** is a real-time Network Traffic Analysis and Subnet Security platform featuring a centralized web operations console, live bandwidth load telemetry, subnet host discovery, socket process attribution, and deep packet inspection.
 
